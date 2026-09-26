@@ -122,11 +122,36 @@ pytest -v
 
 ---
 
+## 🔐 API Reference — Authentication (Phase 1)
+
+| Method | Endpoint | Auth Required | Description |
+|:---|:---|:---|:---|
+| `POST` | `/api/v1/auth/signup` | No | Register new user with name, unique email, and password |
+| `POST` | `/api/v1/auth/login` | No | JSON login returning JWT Bearer access token |
+| `POST` | `/api/v1/auth/login/token` | No | Form-encoded login for Swagger UI Authorize modal |
+| `GET` | `/api/v1/auth/me` | Bearer Token | Retrieve currently authenticated user profile |
+
+### Example Signup Request
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Alice Johnson", "email": "alice@example.com", "password": "securepassword123"}'
+```
+
+### Example Login Request
+```bash
+curl -X POST http://localhost:8000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "alice@example.com", "password": "securepassword123"}'
+```
+
+---
+
 ## 📌 Implementation Phases & Status
 
 - [x] **Phase 0 — Project Bootstrap**: Structure, FastAPI setup, config, Docker, Alembic, health check, pytest suite.
-- [ ] **Phase 1 — Authentication**: User signup, login, password hashing, JWT creation & verification. *(Awaiting approval)*
-- [ ] **Phase 2 — Diagnostic Centres & Tests**: Centre & test management, nested retrieval, pagination, caching.
+- [x] **Phase 1 — Authentication**: User signup, login, password hashing, JWT creation & verification, OAuth2 Swagger support.
+- [ ] **Phase 2 — Diagnostic Centres & Tests**: Centre & test management, nested retrieval, pagination, caching. *(Awaiting approval)*
 - [ ] **Phase 3 — Booking System**: Test bookings, ownership validation, status FSM.
 - [ ] **Phase 4 — Payments & Idempotent Webhook**: Simulated payment provider and webhook idempotency.
 - [ ] **Phase 5 — Edge Cases & Hardening**: Ownership checks, error handling, rate limiting.

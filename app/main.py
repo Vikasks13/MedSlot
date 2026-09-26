@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.database import engine, Base, get_db
+from app.routers.auth import router as auth_router
 
 settings = get_settings()
 
@@ -40,6 +41,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# Register API Routers
+app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get(
