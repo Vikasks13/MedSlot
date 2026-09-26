@@ -1,0 +1,9 @@
+[run]
+concurrency = greenlet, thread
+source = app
+
+[report]
+show_missing = True
+omit =
+    */tests/*
+    */alembic/*
