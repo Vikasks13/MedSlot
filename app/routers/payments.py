@@ -13,6 +13,7 @@ from app.schemas.payment import (
     PaymentWebhookResponse,
 )
 from app.services.payment_service import PaymentService
+from app.utils.rate_limit import webhook_rate_limiter
 
 settings = get_settings()
 router = APIRouter(prefix="/payments", tags=["Payments"])
@@ -59,6 +60,7 @@ async def process_payment(
         "Strictly idempotent: repeated deliveries of the same event_id return HTTP 200 "
         "without corrupting state or creating duplicate records."
     ),
+    dependencies=[Depends(webhook_rate_limiter)],
 )
 async def payment_webhook(
     payload: PaymentWebhookPayload,

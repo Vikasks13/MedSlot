@@ -8,6 +8,7 @@ from app.models.user import User
 from app.schemas.token import Token
 from app.schemas.user import UserCreate, UserLogin, UserResponse
 from app.services.auth_service import AuthService
+from app.utils.rate_limit import auth_rate_limiter
 from app.utils.security import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -34,6 +35,7 @@ async def signup(
     status_code=status.HTTP_200_OK,
     summary="User Login (JSON)",
     description="Authenticate with email & password, returning a JWT access token.",
+    dependencies=[Depends(auth_rate_limiter)],
 )
 async def login_json(
     credentials: UserLogin,
@@ -54,6 +56,7 @@ async def login_json(
     summary="User Login (OAuth2 Form)",
     description="OAuth2-compatible token endpoint for Swagger UI Authorize button (username is email).",
     include_in_schema=True,
+    dependencies=[Depends(auth_rate_limiter)],
 )
 async def login_form(
     form_data: OAuth2PasswordRequestForm = Depends(),

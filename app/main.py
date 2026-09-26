@@ -5,12 +5,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 from app.config import get_settings
 from app.database import engine, Base, get_db
 from app.routers.auth import router as auth_router
 from app.routers.centres import router as centres_router
 from app.routers.bookings import router as bookings_router
 from app.routers.payments import router as payments_router
+from app.utils.exceptions import (
+    global_exception_handler,
+    http_exception_handler,
+    validation_exception_handler,
+)
+from app.utils.logging import StructuredLoggingMiddleware
 
 settings = get_settings()
 
@@ -44,6 +53,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Structured request logging middleware
+app.add_middleware(StructuredLoggingMiddleware)
+
+# Standardized Exception Handlers
+app.add_exception_handler(StarletteHTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
+app.add_exception_handler(Exception, global_exception_handler)
 
 
 # Register API Routers

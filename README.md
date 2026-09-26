@@ -256,6 +256,46 @@ curl -X POST http://localhost:8000/payments/webhook \
 
 ---
 
+## 🛡️ Edge Cases, Hardening & Observability (Phase 5)
+
+### 1. Standardized Error Formats
+All errors return a consistent, structured JSON envelope across the entire API:
+```json
+{
+  "status_code": 422,
+  "detail": [
+    {
+      "field": "body -> price",
+      "message": "Input should be greater than 0",
+      "type": "greater_than"
+    }
+  ],
+  "error_type": "ValidationError",
+  "path": "/api/v1/centres/1/tests"
+}
+```
+Internal server errors (500) are intercepted to prevent sensitive stack traces or environment variables from leaking to consumers.
+
+### 2. Structured Request Logging & Observability
+- **JSON Request Logging**: Intercepts every inbound request and emits structured log entries containing HTTP method, path, status code, client IP, and execution latency.
+- **Latency Header**: Emits an `X-Process-Time-Ms` response header on all outgoing responses for APM monitoring and distributed tracing.
+
+### 3. Sliding Window Rate Limiting
+In-memory sliding-window rate limiting protects sensitive endpoints against abuse and brute-force attacks:
+- **Authentication Endpoints** (`/api/v1/auth/login`, `/api/v1/auth/login/token`): Max 10 requests / 60 seconds per IP.
+- **Payment Webhook** (`/payments/webhook`): Max 60 requests / 60 seconds per IP.
+- Exceeding the threshold immediately yields `HTTP 429 Too Many Requests` with a dynamic `Retry-After` header indicating seconds until requests can resume.
+
+### 4. Edge Cases Defended
+- **Ownership Isolation**: Users cannot view, modify, or pay for bookings owned by other users (`403 Forbidden`).
+- **Test-Centre Relationship Mismatch**: Booking a test at a centre that does not offer that test is rejected (`400 Bad Request`).
+- **Past Appointment Dates**: Appointments scheduled in the past are rejected during request validation (`422 Unprocessable Content`).
+- **State Machine Integrity**: Completed or Cancelled bookings cannot be paid or transitioned illegally (`400 Bad Request`).
+- **Negative & Zero Prices**: Tests must have a price > 0.00 (`422 Unprocessable Content`).
+- **Webhook Replay Attacks**: Identical `event_id` payloads are accepted idempotently (`200 OK`) without double processing or mutating state.
+
+---
+
 ## 📌 Implementation Phases & Status
 
 - [x] **Phase 0 — Project Bootstrap**: Structure, FastAPI setup, config, Docker, Alembic, health check, pytest suite.
@@ -263,6 +303,7 @@ curl -X POST http://localhost:8000/payments/webhook \
 - [x] **Phase 2 — Diagnostic Centres & Tests**: Centre & test management, nested retrieval, pagination, caching.
 - [x] **Phase 3 — Booking System**: Test bookings, ownership validation, status FSM.
 - [x] **Phase 4 — Payments & Idempotent Webhook**: Simulated payment provider and webhook idempotency.
-- [ ] **Phase 5 — Edge Cases & Hardening**: Ownership checks, error handling, rate limiting. *(Awaiting approval)*
-- [ ] **Phase 6 — Comprehensive Test Suite**: Unit, integration, and duplicate event idempotency tests.
+- [x] **Phase 5 — Edge Cases & Hardening**: Ownership checks, standardized error formatting, structured logging, sliding-window rate limiting.
+- [ ] **Phase 6 — Comprehensive Test Suite**: Unit, integration, and duplicate event idempotency tests. *(Awaiting approval)*
 - [ ] **Phase 7 — Final Documentation & Polish**: Complete OpenAPI specs and submission readiness.
+
