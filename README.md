@@ -321,6 +321,131 @@ pytest --cov=app --cov-report=term-missing
 
 ---
 
+## 🗄️ Database & Schema Design
+
+MedSlot uses a relational schema designed with PostgreSQL in mind, featuring strict referential integrity, composite & unique indexes, and numeric precision for financial auditing:
+
+```mermaid
+erDiagram
+    USERS ||--o{ BOOKINGS : "places"
+    DIAGNOSTIC_CENTRES ||--|{ DIAGNOSTIC_TESTS : "offers"
+    DIAGNOSTIC_CENTRES ||--o{ BOOKINGS : "hosts"
+    DIAGNOSTIC_TESTS ||--o{ BOOKINGS : "tested in"
+    BOOKINGS ||--o{ PAYMENTS : "paid via"
+
+    USERS {
+        int id PK "Auto-increment"
+        string name "User full name"
+        string email UK "Unique lowercase indexed"
+        string password_hash "Bcrypt salted hash"
+        boolean is_active "Account status flag"
+        datetime created_at "UTC timestamp"
+        datetime updated_at "UTC timestamp"
+    }
+
+    DIAGNOSTIC_CENTRES {
+        int id PK "Auto-increment"
+        string name "Centre name"
+        string location "City / Area"
+        string contact_number "Phone / Contact"
+        datetime created_at "UTC timestamp"
+        datetime updated_at "UTC timestamp"
+    }
+
+    DIAGNOSTIC_TESTS {
+        int id PK "Auto-increment"
+        int centre_id FK "References diagnostic_centres.id"
+        string name "Test title"
+        text description "Detailed description"
+        numeric price "Numeric(10, 2) price"
+        datetime created_at "UTC timestamp"
+        datetime updated_at "UTC timestamp"
+    }
+
+    BOOKINGS {
+        string id PK "UUID string(36)"
+        int user_id FK "References users.id"
+        int centre_id FK "References diagnostic_centres.id"
+        int test_id FK "References diagnostic_tests.id"
+        datetime appointment_date_time "UTC appointment slot"
+        numeric amount "Numeric(10, 2) price snapshot"
+        string status "PENDING | CONFIRMED | FAILED | CANCELLED"
+        text notes "Optional patient notes"
+        datetime created_at "UTC timestamp"
+        datetime updated_at "UTC timestamp"
+    }
+
+    PAYMENTS {
+        string id PK "UUID string(36)"
+        string booking_id FK "References bookings.id"
+        string idempotency_key UK "Unique external/simulated event ID"
+        string provider_event_id "Gateway event identifier"
+        numeric amount "Numeric(10, 2) transaction amount"
+        string status "SUCCESS | FAILED"
+        string payment_method "UPI | CREDIT_CARD | etc."
+        text failure_reason "Failure reason when declined"
+        datetime created_at "UTC timestamp"
+        datetime updated_at "UTC timestamp"
+    }
+```
+
+### Key Architectural Schema Decisions
+
+1. **UUID Primary Keys for Bookings & Payments**:
+   - `bookings.id` and `payments.id` use `String(36)` containing RFC-4122 standard UUIDs.
+   - Prevents **ID enumeration attacks** where malicious users crawl sequential integer IDs (`/bookings/1`, `/bookings/2`).
+2. **Decimal Snapshotting (`Numeric(10, 2)`)**:
+   - Diagnostic test prices can change over time. When a booking is created, the current price is captured in `bookings.amount`.
+   - Subsequent changes to test pricing do not alter historical booking totals.
+   - Python `Decimal` is used across all layers to avoid IEEE 754 floating-point rounding errors.
+3. **Database-Level Idempotency (`payments.idempotency_key UNIQUE`)**:
+   - Webhook events store `event_id` in `idempotency_key` with a `UNIQUE` constraint and index.
+   - Guaranteed against duplicate records and state corruption even under distributed concurrent deliveries.
+4. **Foreign Key Indexes**:
+   - All foreign keys (`user_id`, `centre_id`, `test_id`, `booking_id`) are indexed to optimize relational joins and queries.
+
+---
+
+## 💡 Important Assumptions Made
+
+1. **Dual Payment Modalities**:
+   - **Simulated Payment (`POST /payments`)**: Allows the authenticated patient to simulate a checkout payment directly from their client app.
+   - **Payment Webhook (`POST /payments/webhook`)**: Allows payment gateways (e.g., Razorpay, Stripe) to asynchronously notify the platform of transaction results.
+2. **Booking & Test Compatibility**:
+   - When creating a booking, the system verifies that the selected `test_id` actually belongs to the specified `centre_id`. Mismatched combinations are rejected with `400 Bad Request`.
+3. **State Transition Immutability**:
+   - A `CANCELLED` booking cannot be revived or paid for.
+   - A `CONFIRMED` booking cannot be paid again.
+   - A `FAILED` booking cannot be cancelled (it never confirmed).
+4. **Ownership Access Control**:
+   - Patients can only view and manage their own bookings and payment records. Accessing another user's resource yields `403 Forbidden`.
+5. **Future Appointments Only**:
+   - Appointment timestamps must be in the future relative to the booking creation time (validated via Pydantic validator).
+6. **Graceful Fallbacks for Infrastructure**:
+   - If Redis is unavailable, the application falls back seamlessly to an in-memory dictionary cache with TTL eviction without interrupting API traffic.
+   - If PostgreSQL is not configured, the application falls back to async SQLite (`aiosqlite`) for frictionless local developer onboarding.
+
+---
+
+## 🚀 What I Would Improve With More Time
+
+1. **Real Payment Gateway Integration**:
+   - Implement production-grade webhook HMAC-SHA256 signature verification for providers like Razorpay or Stripe.
+2. **Asynchronous Background Worker**:
+   - Introduce **Celery** or **ARQ** with Redis as a broker to offload email/SMS appointment confirmations, invoice PDF generation, and webhook retries out-of-band.
+3. **Distributed Slot Locking (Prevent Overbooking)**:
+   - Implement Redis distributed locks (`Redlock`) or PostgreSQL row-level locks (`SELECT FOR UPDATE`) on centre time slots to prevent multiple users from booking the exact same time slot concurrently.
+4. **Role-Based Access Control (RBAC)**:
+   - Add granular permission scopes (`admin`, `staff`, `patient`) allowing centre staff to update test availability, reschedule appointments, and view lab reports.
+5. **Full-Text Search Engine**:
+   - Implement PostgreSQL `tsvector` / trigram indexes or integrate Elasticsearch for fuzzy search on centres and test catalogs.
+6. **Token Revocation & Refresh Token Rotation**:
+   - Implement refresh tokens with sliding expiration and a Redis-backed token blacklist for instantaneous user logout and session revocation.
+7. **Production Telemetry & Tracing**:
+   - Export structured logs and metrics to OpenTelemetry collector, Prometheus, and Grafana.
+
+---
+
 ## 📌 Implementation Phases & Status
 
 - [x] **Phase 0 — Project Bootstrap**: Structure, FastAPI setup, config, Docker, Alembic, health check, pytest suite.
@@ -330,6 +455,7 @@ pytest --cov=app --cov-report=term-missing
 - [x] **Phase 4 — Payments & Idempotent Webhook**: Simulated payment provider and webhook idempotency.
 - [x] **Phase 5 — Edge Cases & Hardening**: Ownership checks, standardized error formatting, structured logging, sliding-window rate limiting.
 - [x] **Phase 6 — Comprehensive Test Suite**: 49 tests, 97% code coverage, 100% router/service coverage.
-- [ ] **Phase 7 — Final Documentation & Polish**: Complete OpenAPI specs and submission readiness.
+- [x] **Phase 7 — Final Documentation & Polish**: Complete OpenAPI specs, schema diagrams, design assumptions, and GitHub submission readiness.
+
 
 
