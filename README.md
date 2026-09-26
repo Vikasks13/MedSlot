@@ -215,13 +215,54 @@ curl -X PATCH http://localhost:8000/api/v1/bookings/<BOOKING_UUID>/cancel \
 
 ---
 
+## 💳 API Reference — Simulated Payments & Webhook (Phase 4)
+
+| Method | Endpoint | Auth Required | Description |
+|:---|:---|:---|:---|
+| `POST` | `/payments` or `/api/v1/payments` | Bearer Token | Process simulated payment for a booking (transitions to `CONFIRMED` or `FAILED`) |
+| `POST` | `/payments/webhook` or `/api/v1/payments/webhook` | Optional Secret Header | Idempotent webhook accepting external/simulated provider status events |
+| `GET` | `/payments/{id}` or `/api/v1/payments/{id}` | Bearer Token | Retrieve single payment record by ID (ownership verified) |
+
+### 🔒 Idempotency Guarantee
+The webhook endpoint is protected by a two-layer idempotency defense:
+1. **Application-Level Check**: Look up `idempotency_key == event_id`. If already processed, immediately return `200 OK` with `status: "already_processed"` without creating duplicate payments or corrupting booking state.
+2. **Database-Level Unique Constraint**: A `UNIQUE` constraint and index on `payments.idempotency_key` ensures that even under concurrent race conditions from distributed workers, only one transaction can commit.
+
+### Example Simulated Payment Request
+```bash
+curl -X POST http://localhost:8000/payments \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "booking_id": "<BOOKING_UUID>",
+    "payment_method": "UPI",
+    "simulate_status": "SUCCESS"
+  }'
+```
+
+### Example Payment Webhook Request
+```bash
+curl -X POST http://localhost:8000/payments/webhook \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event_id": "evt_gateway_unique_987654",
+    "event_type": "payment.succeeded",
+    "booking_id": "<BOOKING_UUID>",
+    "amount": 600.00,
+    "status": "SUCCESS",
+    "payment_method": "RAZORPAY_SIMULATED"
+  }'
+```
+
+---
+
 ## 📌 Implementation Phases & Status
 
 - [x] **Phase 0 — Project Bootstrap**: Structure, FastAPI setup, config, Docker, Alembic, health check, pytest suite.
 - [x] **Phase 1 — Authentication**: User signup, login, password hashing, JWT creation & verification, OAuth2 Swagger support.
 - [x] **Phase 2 — Diagnostic Centres & Tests**: Centre & test management, nested retrieval, pagination, caching.
 - [x] **Phase 3 — Booking System**: Test bookings, ownership validation, status FSM.
-- [ ] **Phase 4 — Payments & Idempotent Webhook**: Simulated payment provider and webhook idempotency. *(Awaiting approval)*
-- [ ] **Phase 5 — Edge Cases & Hardening**: Ownership checks, error handling, rate limiting.
+- [x] **Phase 4 — Payments & Idempotent Webhook**: Simulated payment provider and webhook idempotency.
+- [ ] **Phase 5 — Edge Cases & Hardening**: Ownership checks, error handling, rate limiting. *(Awaiting approval)*
 - [ ] **Phase 6 — Comprehensive Test Suite**: Unit, integration, and duplicate event idempotency tests.
 - [ ] **Phase 7 — Final Documentation & Polish**: Complete OpenAPI specs and submission readiness.

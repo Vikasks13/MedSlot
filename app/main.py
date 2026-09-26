@@ -10,6 +10,7 @@ from app.database import engine, Base, get_db
 from app.routers.auth import router as auth_router
 from app.routers.centres import router as centres_router
 from app.routers.bookings import router as bookings_router
+from app.routers.payments import router as payments_router
 
 settings = get_settings()
 
@@ -49,6 +50,9 @@ app.add_middleware(
 app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 app.include_router(centres_router, prefix=settings.API_V1_PREFIX)
 app.include_router(bookings_router, prefix=settings.API_V1_PREFIX)
+app.include_router(payments_router, prefix=settings.API_V1_PREFIX)
+# Spec compatibility for root-level `/payments` and `/payments/webhook`
+app.include_router(payments_router, prefix="", include_in_schema=False)
 
 
 @app.get(

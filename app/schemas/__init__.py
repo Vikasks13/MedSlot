@@ -16,6 +16,12 @@ from app.schemas.booking import (
     BookingResponse,
     PaginatedBookingsResponse,
 )
+from app.schemas.payment import (
+    PaymentCreate,
+    PaymentResponse,
+    PaymentWebhookPayload,
+    PaymentWebhookResponse,
+)
 
 __all__ = [
     "UserBase",
@@ -34,4 +40,8 @@ __all__ = [
     "BookingCreate",
     "BookingResponse",
     "PaginatedBookingsResponse",
+    "PaymentCreate",
+    "PaymentResponse",
+    "PaymentWebhookPayload",
+    "PaymentWebhookResponse",
 ]
