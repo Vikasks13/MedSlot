@@ -1,5 +1,16 @@
 from app.schemas.user import UserBase, UserCreate, UserLogin, UserResponse
 from app.schemas.token import Token, TokenPayload
+from app.schemas.test import (
+    DiagnosticTestBase,
+    DiagnosticTestCreate,
+    DiagnosticTestResponse,
+)
+from app.schemas.centre import (
+    DiagnosticCentreBase,
+    DiagnosticCentreCreate,
+    DiagnosticCentreResponse,
+    PaginatedCentresResponse,
+)
 
 __all__ = [
     "UserBase",
@@ -8,4 +19,11 @@ __all__ = [
     "UserResponse",
     "Token",
     "TokenPayload",
+    "DiagnosticTestBase",
+    "DiagnosticTestCreate",
+    "DiagnosticTestResponse",
+    "DiagnosticCentreBase",
+    "DiagnosticCentreCreate",
+    "DiagnosticCentreResponse",
+    "PaginatedCentresResponse",
 ]

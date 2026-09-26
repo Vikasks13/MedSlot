@@ -147,12 +147,41 @@ curl -X POST http://localhost:8000/api/v1/auth/login \
 
 ---
 
+## 🏥 API Reference — Diagnostic Centres & Tests (Phase 2)
+
+| Method | Endpoint | Auth Required | Description |
+|:---|:---|:---|:---|
+| `GET` | `/api/v1/centres` | No | List paginated centres with tests, with optional `location` & `search` filters |
+| `POST` | `/api/v1/centres` | Bearer Token | Create a new diagnostic centre |
+| `GET` | `/api/v1/centres/{id}` | No | Get centre details by ID including all offered tests |
+| `GET` | `/api/v1/centres/{id}/tests` | No | List tests offered by a specific diagnostic centre |
+| `POST` | `/api/v1/centres/{id}/tests` | Bearer Token | Add a diagnostic test with name, description, and price to a centre |
+| `GET` | `/api/v1/tests/{test_id}` | No | Get specific diagnostic test details |
+
+### Example Create Diagnostic Centre Request
+```bash
+curl -X POST http://localhost:8000/api/v1/centres \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Apollo Diagnostics", "location": "Koramangala, Bangalore", "contact_number": "+91-9876543210"}'
+```
+
+### Example Add Test to Centre Request
+```bash
+curl -X POST http://localhost:8000/api/v1/centres/1/tests \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Complete Blood Count (CBC)", "description": "Full blood panel", "price": 450.00}'
+```
+
+---
+
 ## 📌 Implementation Phases & Status
 
 - [x] **Phase 0 — Project Bootstrap**: Structure, FastAPI setup, config, Docker, Alembic, health check, pytest suite.
 - [x] **Phase 1 — Authentication**: User signup, login, password hashing, JWT creation & verification, OAuth2 Swagger support.
-- [ ] **Phase 2 — Diagnostic Centres & Tests**: Centre & test management, nested retrieval, pagination, caching. *(Awaiting approval)*
-- [ ] **Phase 3 — Booking System**: Test bookings, ownership validation, status FSM.
+- [x] **Phase 2 — Diagnostic Centres & Tests**: Centre & test management, nested retrieval, pagination, caching.
+- [ ] **Phase 3 — Booking System**: Test bookings, ownership validation, status FSM. *(Awaiting approval)*
 - [ ] **Phase 4 — Payments & Idempotent Webhook**: Simulated payment provider and webhook idempotency.
 - [ ] **Phase 5 — Edge Cases & Hardening**: Ownership checks, error handling, rate limiting.
 - [ ] **Phase 6 — Comprehensive Test Suite**: Unit, integration, and duplicate event idempotency tests.
