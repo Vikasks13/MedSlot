@@ -11,6 +11,11 @@ from app.schemas.centre import (
     DiagnosticCentreResponse,
     PaginatedCentresResponse,
 )
+from app.schemas.booking import (
+    BookingCreate,
+    BookingResponse,
+    PaginatedBookingsResponse,
+)
 
 __all__ = [
     "UserBase",
@@ -26,4 +31,7 @@ __all__ = [
     "DiagnosticCentreCreate",
     "DiagnosticCentreResponse",
     "PaginatedCentresResponse",
+    "BookingCreate",
+    "BookingResponse",
+    "PaginatedBookingsResponse",
 ]

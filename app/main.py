@@ -9,6 +9,7 @@ from app.config import get_settings
 from app.database import engine, Base, get_db
 from app.routers.auth import router as auth_router
 from app.routers.centres import router as centres_router
+from app.routers.bookings import router as bookings_router
 
 settings = get_settings()
 
@@ -47,6 +48,7 @@ app.add_middleware(
 # Register API Routers
 app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
 app.include_router(centres_router, prefix=settings.API_V1_PREFIX)
+app.include_router(bookings_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get(

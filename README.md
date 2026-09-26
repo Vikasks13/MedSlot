@@ -176,13 +176,52 @@ curl -X POST http://localhost:8000/api/v1/centres/1/tests \
 
 ---
 
+## 📅 API Reference — Booking System (Phase 3)
+
+| Method | Endpoint | Auth Required | Description |
+|:---|:---|:---|:---|
+| `POST` | `/api/v1/bookings` | Bearer Token | Book a diagnostic test (starts in `PENDING` state) |
+| `GET` | `/api/v1/bookings` | Bearer Token | List current user's bookings with pagination and status filter |
+| `GET` | `/api/v1/bookings/{id}` | Bearer Token | Retrieve single booking details (ownership enforced) |
+| `PATCH` | `/api/v1/bookings/{id}/cancel` | Bearer Token | Cancel a `PENDING` or `CONFIRMED` booking (status -> `CANCELLED`) |
+
+### Booking Status Lifecycle
+```
+ [Create Booking] ──► PENDING ────(Payment Success)──► CONFIRMED ──► [Completed]
+                         │                                 │
+                         │ (Payment Failed)                │ (User Cancels)
+                         ▼                                 ▼
+                       FAILED                          CANCELLED
+```
+
+### Example Create Booking Request
+```bash
+curl -X POST http://localhost:8000/api/v1/bookings \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "centre_id": 1,
+    "test_id": 1,
+    "appointment_date_time": "2026-10-01T10:00:00Z",
+    "notes": "Patient requires wheelchair assistance"
+  }'
+```
+
+### Example Cancel Booking Request
+```bash
+curl -X PATCH http://localhost:8000/api/v1/bookings/<BOOKING_UUID>/cancel \
+  -H "Authorization: Bearer <TOKEN>"
+```
+
+---
+
 ## 📌 Implementation Phases & Status
 
 - [x] **Phase 0 — Project Bootstrap**: Structure, FastAPI setup, config, Docker, Alembic, health check, pytest suite.
 - [x] **Phase 1 — Authentication**: User signup, login, password hashing, JWT creation & verification, OAuth2 Swagger support.
 - [x] **Phase 2 — Diagnostic Centres & Tests**: Centre & test management, nested retrieval, pagination, caching.
-- [ ] **Phase 3 — Booking System**: Test bookings, ownership validation, status FSM. *(Awaiting approval)*
-- [ ] **Phase 4 — Payments & Idempotent Webhook**: Simulated payment provider and webhook idempotency.
+- [x] **Phase 3 — Booking System**: Test bookings, ownership validation, status FSM.
+- [ ] **Phase 4 — Payments & Idempotent Webhook**: Simulated payment provider and webhook idempotency. *(Awaiting approval)*
 - [ ] **Phase 5 — Edge Cases & Hardening**: Ownership checks, error handling, rate limiting.
 - [ ] **Phase 6 — Comprehensive Test Suite**: Unit, integration, and duplicate event idempotency tests.
 - [ ] **Phase 7 — Final Documentation & Polish**: Complete OpenAPI specs and submission readiness.
